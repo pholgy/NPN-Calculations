@@ -2,475 +2,620 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 
-# Page configuration
 st.set_page_config(
-    page_title="NPN Analyzer | วิเคราะห์ NPN",
+    page_title="NPN Analyzer",
     page_icon="🔬",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# Language selection
 if 'language' not in st.session_state:
     st.session_state.language = 'th'
+if 'page' not in st.session_state:
+    st.session_state.page = 'upload'
 
-# Translation dictionary
 translations = {
     'th': {
-        'title': 'ระบบวิเคราะห์ NPN',
-        'subtitle': 'วิเคราะห์ปริมาณไนโตรเจนไม่ใช่โปรตีนในกากถั่วเหลือง',
-        'upload_title': 'อัปโหลดภาพสารละลาย',
-        'upload_help': 'ถ่ายหรืออัปโหลดภาพสารละลายหลังทำปฏิกิริยากับ Nessler reagent',
-        'analyze_btn': '🔍 วิเคราะห์ทันที',
-        'results_title': 'ผลการวิเคราะห์',
-        'npn_value': 'ปริมาณ NPN',
-        'quality_level': 'คุณภาพ',
-        'recommendation': 'คำแนะนำ',
-        'rgb_values': 'ค่าสี RGB',
-        'method': 'รายละเอียดการคำนวณ',
-        'how_it_works': 'วิธีใช้งาน',
-        'step1': '📸 ถ่ายหรืออัปโหลดภาพ',
-        'step1_detail': 'ถ่ายภาพสารละลายหลังทำปฏิกิริยากับ Nessler reagent',
-        'step2': '🔬 วิเคราะห์อัตโนมัติ',
-        'step2_detail': 'ระบบดึงค่าสี RGB และคำนวณปริมาณ NPN',
-        'step3': '📊 รับผลลัพธ์',
-        'step3_detail': 'ดูค่า NPN พร้อมระดับคุณภาพและคำแนะนำ',
-        'about_system': 'เกี่ยวกับระบบ',
-        'reference': 'อ้างอิง',
-        'ref_text': 'Nopparatmaitree et al. (2023) - Khon Kaen Agriculture Journal',
-        'equation': 'สมการ',
-        'quality_good': 'ดีเยี่ยม',
-        'quality_medium': 'ปานกลาง',
-        'quality_low': 'ต่ำ',
-        'quality_very_low': 'ต่ำมาก',
-        'rec_good': 'คุณภาพดี เหมาะสำหรับใช้เป็นวัตถุดิบอาหารสัตว์',
-        'rec_medium': 'คุณภาพปานกลาง แนะนำให้ตรวจสอบเพิ่มเติม',
+        'upload': 'อัปโหลด', 'results': 'ผลลัพธ์', 'guide': 'คู่มือ', 'about': 'เกี่ยวกับ',
+        'title': 'NPN ANALYZER', 'subtitle': 'ระบบวิเคราะห์ไนโตรเจนไม่ใช่โปรตีน',
+        'upload_title': 'อัปโหลดภาพสารละลาย', 'analyze': 'วิเคราะห์', 'npn': 'ปริมาณ NPN',
+        'quality': 'คุณภาพ', 'recommendation': 'คำแนะนำ', 'rgb': 'ค่าสี RGB',
+        'excellent': 'ดีเยี่ยม', 'good': 'ดี', 'medium': 'ปานกลาง', 'low': 'ต่ำ', 'very_low': 'ต่ำมาก',
+        'rec_excellent': 'คุณภาพดีเยี่ยม เหมาะสำหรับใช้เป็นวัตถุดิบอาหารสัตว์',
+        'rec_medium': 'คุณภาพปานกลาง ควรตรวจสอบเพิ่มเติม',
         'rec_low': 'คุณภาพต่ำ ควรปรับปรุงกระบวนการผลิต',
-        'rec_very_low': 'คุณภาพต่ำมาก ไม่แนะนำให้ใช้ ควรตรวจสอบการปลอมปน',
-        'note': 'หมายเหตุ',
-        'note_text': 'ควรถ่ายภาพภายใต้แสงสม่ำเสมอและใช้พื้นหลังสีขาวเพื่อความแม่นยำ',
+        'rec_very_low': 'คุณภาพต่ำมาก ไม่แนะนำให้ใช้งาน',
+        'no_result': 'ยังไม่มีผลการวิเคราะห์', 'upload_first': 'กรุณาอัปโหลดภาพและกดวิเคราะห์',
     },
     'en': {
-        'title': 'NPN Analysis System',
-        'subtitle': 'Analyze Non-Protein Nitrogen in Soybean Meal',
-        'upload_title': 'Upload Solution Image',
-        'upload_help': 'Take or upload photo of solution after Nessler reagent reaction',
-        'analyze_btn': '🔍 Analyze Now',
-        'results_title': 'Analysis Results',
-        'npn_value': 'NPN Content',
-        'quality_level': 'Quality',
-        'recommendation': 'Recommendation',
-        'rgb_values': 'RGB Values',
-        'method': 'Calculation Details',
-        'how_it_works': 'How It Works',
-        'step1': '📸 Capture or Upload',
-        'step1_detail': 'Take photo of solution after Nessler reagent reaction',
-        'step2': '🔬 Auto Analysis',
-        'step2_detail': 'System extracts RGB values and calculates NPN',
-        'step3': '📊 Get Results',
-        'step3_detail': 'View NPN value with quality level and recommendations',
-        'about_system': 'About System',
-        'reference': 'Reference',
-        'ref_text': 'Nopparatmaitree et al. (2023) - Khon Kaen Agriculture Journal',
-        'equation': 'Equation',
-        'quality_good': 'Excellent',
-        'quality_medium': 'Medium',
-        'quality_low': 'Low',
-        'quality_very_low': 'Very Low',
-        'rec_good': 'Good quality, suitable for animal feed',
+        'upload': 'Upload', 'results': 'Results', 'guide': 'Guide', 'about': 'About',
+        'title': 'NPN ANALYZER', 'subtitle': 'Non-Protein Nitrogen Analysis System',
+        'upload_title': 'Upload Solution Image', 'analyze': 'Analyze', 'npn': 'NPN Content',
+        'quality': 'Quality', 'recommendation': 'Recommendation', 'rgb': 'RGB Values',
+        'excellent': 'Excellent', 'good': 'Good', 'medium': 'Medium', 'low': 'Low', 'very_low': 'Very Low',
+        'rec_excellent': 'Excellent quality, suitable for animal feed',
         'rec_medium': 'Medium quality, further inspection recommended',
-        'rec_low': 'Low quality, production process improvement needed',
-        'rec_very_low': 'Very low quality, not recommended, check for adulteration',
-        'note': 'Note',
-        'note_text': 'Take photos under consistent lighting with white background for accuracy',
+        'rec_low': 'Low quality, production improvement needed',
+        'rec_very_low': 'Very low quality, not recommended',
+        'no_result': 'No Results Yet', 'upload_first': 'Please upload an image and analyze',
     }
 }
 
-def get_text(key):
+def t(key):
     return translations[st.session_state.language][key]
 
 def extract_rgb_from_image(image):
-    """Extract average RGB values from the uploaded image"""
     img_array = np.array(image)
-
     if len(img_array.shape) == 2:
         img_array = np.stack([img_array] * 3, axis=-1)
     elif img_array.shape[2] == 4:
         img_array = img_array[:, :, :3]
-
-    avg_r = np.mean(img_array[:, :, 0])
-    avg_g = np.mean(img_array[:, :, 1])
-    avg_b = np.mean(img_array[:, :, 2])
-
-    return avg_r, avg_g, avg_b
+    return np.mean(img_array[:, :, 0]), np.mean(img_array[:, :, 1]), np.mean(img_array[:, :, 2])
 
 def calculate_npn(green_value):
-    """
-    Calculate NPN using regression equation from research
-    y = -0.0261x + 3.8385
-    where y = NPN (%), x = Green (G) value
-    R² = 0.5902, r = -0.76823
-    """
-    npn_percentage = -0.0261 * green_value + 3.8385
-    return max(0, npn_percentage)
+    return max(0, -0.0261 * green_value + 3.8385)
 
 def assess_quality(npn_value):
-    """Assess quality based on NPN content"""
     if npn_value <= 0.5:
-        quality = get_text('quality_good')
-        recommendation = get_text('rec_good')
-        color = '#10b981'
-        emoji = '✅'
+        return t('excellent'), t('rec_excellent'), '#10b981', '🟢'
     elif npn_value <= 1.0:
-        quality = get_text('quality_medium')
-        recommendation = get_text('rec_medium')
-        color = '#f59e0b'
-        emoji = '⚠️'
+        return t('good'), t('rec_excellent'), '#10b981', '🟢'
     elif npn_value <= 2.0:
-        quality = get_text('quality_low')
-        recommendation = get_text('rec_low')
-        color = '#ef4444'
-        emoji = '⚠️'
+        return t('medium'), t('rec_medium'), '#f59e0b', '🟡'
+    elif npn_value <= 3.0:
+        return t('low'), t('rec_low'), '#ef4444', '🔴'
     else:
-        quality = get_text('quality_very_low')
-        recommendation = get_text('rec_very_low')
-        color = '#dc2626'
-        emoji = '❌'
+        return t('very_low'), t('rec_very_low'), '#dc2626', '🔴'
 
-    return quality, recommendation, color, emoji
-
-# Custom CSS
+# Modern CSS with proper spacing
 st.markdown("""
 <style>
-    /* Main container */
-    .main {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2rem 1rem;
+    @import url('https://rsms.me/inter/inter.css');
+
+    * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Card style */
-    .card {
-        background: white;
-        border-radius: 20px;
-        padding: 2rem;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        margin-bottom: 2rem;
+    /* Remove default padding */
+    .main .block-container {
+        padding: 0 !important;
+        max-width: 100% !important;
     }
 
-    /* Header */
-    .header {
-        text-align: center;
-        color: white;
-        margin-bottom: 2rem;
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: #ffffff;
+        border-right: 1px solid #e5e7eb;
+        padding: 0;
     }
 
-    .header h1 {
-        font-size: 3rem;
-        font-weight: 800;
-        margin: 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    [data-testid="stSidebar"] > div {
+        padding: 40px 24px;
     }
 
-    .header p {
-        font-size: 1.2rem;
-        margin-top: 0.5rem;
-        opacity: 0.95;
+    /* Sidebar title */
+    .sidebar-header {
+        margin-bottom: 48px;
     }
 
-    /* Result card */
-    .result-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 15px;
-        padding: 2rem;
-        color: white;
-        text-align: center;
-        margin: 2rem 0;
-    }
-
-    .npn-value {
-        font-size: 4rem;
-        font-weight: 900;
-        margin: 1rem 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    }
-
-    .quality-badge {
-        display: inline-block;
-        padding: 0.75rem 2rem;
-        border-radius: 50px;
-        font-size: 1.5rem;
+    .sidebar-header h1 {
+        font-size: 18px;
         font-weight: 700;
-        margin: 1rem 0;
-        background: white;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        color: #111827;
+        margin: 0 0 4px 0;
+        letter-spacing: -0.02em;
     }
 
-    /* Info boxes */
-    .info-box {
-        background: #f8fafc;
+    .sidebar-header p {
+        font-size: 13px;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    /* Menu buttons */
+    .menu-item {
+        display: block;
+        width: 100%;
+        padding: 12px 16px;
+        margin: 4px 0;
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        text-align: left;
+        font-size: 14px;
+        font-weight: 500;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .menu-item:hover {
+        background: #f3f4f6;
+        color: #111827;
+    }
+
+    .menu-item.active {
+        background: #000000;
+        color: #ffffff;
+    }
+
+    .stButton > button {
+        width: 100%;
+        padding: 12px 16px;
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        text-align: left;
+        font-size: 14px;
+        font-weight: 500;
+        color: #6b7280;
+        transition: all 0.15s ease;
+    }
+
+    .stButton > button:hover {
+        background: #f3f4f6;
+        color: #111827;
+    }
+
+    /* Language selector */
+    [data-testid="stRadio"] {
+        margin: 32px 0;
+    }
+
+    [data-testid="stRadio"] > div {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 4px;
+    }
+
+    /* Main content */
+    .main {
+        background: #fafafa;
+    }
+
+    /* Top bar */
+    .top-bar {
+        background: #ffffff;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 24px 48px;
+        margin-bottom: 48px;
+    }
+
+    .top-bar h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 4px 0;
+        letter-spacing: -0.03em;
+    }
+
+    .top-bar p {
+        font-size: 15px;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    /* Content area */
+    .content-wrapper {
+        padding: 0 48px 48px 48px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    /* Card */
+    .card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .card h2 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 20px 0;
+    }
+
+    /* Upload area */
+    [data-testid="stFileUploader"] {
+        border: 2px dashed #d1d5db;
         border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        border-left: 4px solid #667eea;
-    }
-
-    /* RGB display */
-    .rgb-container {
-        display: flex;
-        justify-content: space-around;
-        margin: 1rem 0;
-        gap: 1rem;
-    }
-
-    .rgb-box {
-        flex: 1;
+        padding: 48px 32px;
         text-align: center;
-        padding: 1rem;
-        border-radius: 10px;
-        background: #f1f5f9;
+        background: #fafafa;
+        transition: all 0.2s ease;
     }
 
-    .rgb-label {
-        font-size: 0.9rem;
-        color: #64748b;
+    [data-testid="stFileUploader"]:hover {
+        border-color: #9ca3af;
+        background: #f9fafb;
+    }
+
+    /* Results card */
+    .result-card {
+        background: linear-gradient(135deg, #000000 0%, #1f2937 100%);
+        border-radius: 16px;
+        padding: 48px 32px;
+        text-align: center;
+        margin: 24px 0;
+    }
+
+    .result-value {
+        font-size: 72px;
+        font-weight: 800;
+        color: #ffffff;
+        line-height: 1;
+        margin: 16px 0;
+        letter-spacing: -0.04em;
+    }
+
+    .result-label {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #9ca3af;
         font-weight: 600;
     }
 
-    .rgb-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #1e293b;
-        margin-top: 0.5rem;
+    .quality-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border-radius: 100px;
+        font-weight: 600;
+        font-size: 14px;
+        margin: 20px 0;
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        backdrop-filter: blur(10px);
     }
 
-    /* Steps */
-    .step-container {
-        display: flex;
-        justify-content: space-around;
-        margin: 2rem 0;
-        gap: 1rem;
+    /* RGB Grid */
+    .rgb-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin: 24px 0;
     }
 
-    .step {
-        flex: 1;
+    .rgb-item {
+        background: #fafafa;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
         text-align: center;
-        padding: 1.5rem;
-        background: #f8fafc;
+    }
+
+    .rgb-item-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #9ca3af;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .rgb-item-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    /* Info box */
+    .info-box {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-left: 3px solid #111827;
+        border-radius: 8px;
+        padding: 20px 24px;
+        margin: 24px 0;
+    }
+
+    .info-box-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 8px 0;
+    }
+
+    .info-box-text {
+        font-size: 14px;
+        color: #4b5563;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    /* Analyze button */
+    .analyze-button button {
+        background: #000000 !important;
+        color: #ffffff !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        padding: 16px 32px !important;
+        border: none !important;
+        border-radius: 12px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .analyze-button button:hover {
+        background: #1f2937 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    /* Image preview */
+    .image-preview {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+    }
+
+    /* Hide Streamlit elements */
+    #MainMenu, footer, .stDeployButton {
+        display: none;
+    }
+
+    /* Section spacing */
+    h2 {
+        font-size: 20px;
+        font-weight: 600;
+        color: #111827;
+        margin: 40px 0 20px 0;
+        letter-spacing: -0.02em;
+    }
+
+    h3 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #111827;
+        margin: 24px 0 12px 0;
+    }
+
+    /* Sidebar sections */
+    .sidebar-section {
+        margin: 32px 0;
+        padding: 20px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
         border-radius: 12px;
     }
 
-    .step-icon {
-        font-size: 3rem;
-        margin-bottom: 0.5rem;
+    .sidebar-section h3 {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        font-weight: 600;
+        margin: 0 0 12px 0;
     }
 
-    .step-title {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #1e293b;
-        margin: 0.5rem 0;
+    .sidebar-section code {
+        display: block;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        color: #111827;
+        font-family: 'SF Mono', Monaco, Consolas, monospace;
     }
 
-    .step-detail {
-        font-size: 0.9rem;
-        color: #64748b;
+    .sidebar-section p {
+        font-size: 13px;
+        color: #6b7280;
+        line-height: 1.6;
+        margin: 8px 0 0 0;
     }
-
-    /* Button */
-    .stButton>button {
-        width: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        font-size: 1.3rem;
-        font-weight: 700;
-        padding: 1rem 2rem;
-        border-radius: 12px;
-        border: none;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        transition: all 0.3s;
-    }
-
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-    }
-
-    /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# Language toggle in sidebar
+# Sidebar
 with st.sidebar:
-    st.markdown("### ⚙️ Settings")
-    lang = st.radio(
-        "Language / ภาษา",
-        ["🇹🇭 ไทย", "🇬🇧 English"],
-        index=0 if st.session_state.language == 'th' else 1
-    )
-    st.session_state.language = 'th' if '🇹🇭' in lang else 'en'
-
-    st.markdown("---")
-    st.markdown(f"### {get_text('about_system')}")
     st.markdown(f"""
-    **{get_text('equation')}:**
-    `y = -0.0261x + 3.8385`
-
-    - y = NPN (%)
-    - x = Green (G) value
-    - R² = 0.5902
-
-    **{get_text('reference')}:**
-    {get_text('ref_text')}
-    """)
-
-# Header
-st.markdown(f"""
-<div class="header">
-    <h1>🔬 {get_text('title')}</h1>
-    <p>{get_text('subtitle')}</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Main container
-col1, col2 = st.columns([1, 1], gap="large")
-
-with col1:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
-    # How it works
-    st.markdown(f"### {get_text('how_it_works')}")
-
-    st.markdown(f"""
-    <div class="step-container">
-        <div class="step">
-            <div class="step-icon">📸</div>
-            <div class="step-title">{get_text('step1')}</div>
-            <div class="step-detail">{get_text('step1_detail')}</div>
-        </div>
-        <div class="step">
-            <div class="step-icon">🔬</div>
-            <div class="step-title">{get_text('step2')}</div>
-            <div class="step-detail">{get_text('step2_detail')}</div>
-        </div>
-        <div class="step">
-            <div class="step-icon">📊</div>
-            <div class="step-title">{get_text('step3')}</div>
-            <div class="step-detail">{get_text('step3_detail')}</div>
-        </div>
+    <div class="sidebar-header">
+        <h1>🔬 {t('title')}</h1>
+        <p>{t('subtitle')}</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # Upload section
-    st.markdown(f"### {get_text('upload_title')}")
-    uploaded_file = st.file_uploader(
-        get_text('upload_help'),
-        type=['png', 'jpg', 'jpeg'],
-        label_visibility="collapsed"
-    )
+    # Language
+    lang = st.radio("", ["🇹🇭 ไทย", "🇬🇧 English"],
+                    index=0 if st.session_state.language == 'th' else 1,
+                    label_visibility="collapsed")
+    st.session_state.language = 'th' if '🇹🇭' in lang else 'en'
 
-    if uploaded_file:
-        image = Image.open(uploaded_file)
-        st.image(image, use_container_width=True, caption="Uploaded Image")
+    # Menu
+    if st.button(f"📸  {t('upload')}", key="btn_upload"):
+        st.session_state.page = 'upload'
+        st.rerun()
 
-        if st.button(get_text('analyze_btn'), use_container_width=True):
-            st.session_state.analyzed = True
-            st.session_state.image = image
+    if st.button(f"📊  {t('results')}", key="btn_results"):
+        st.session_state.page = 'results'
+        st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    if st.button(f"📖  {t('guide')}", key="btn_guide"):
+        st.session_state.page = 'guide'
+        st.rerun()
 
-    # Note
-    st.info(f"**{get_text('note')}:** {get_text('note_text')}")
+    if st.button(f"ℹ️  {t('about')}", key="btn_about"):
+        st.session_state.page = 'about'
+        st.rerun()
 
-with col2:
-    if 'analyzed' in st.session_state and st.session_state.analyzed:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+    # Equation
+    st.markdown("""
+    <div class="sidebar-section">
+        <h3>สมการ / Equation</h3>
+        <code>y = -0.0261x + 3.8385</code>
+        <p>
+        <strong>y</strong> = NPN (%)<br>
+        <strong>x</strong> = Green (G)<br>
+        <strong>R²</strong> = 0.5902
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-        # Extract RGB and calculate
-        r, g, b = extract_rgb_from_image(st.session_state.image)
-        npn_value = calculate_npn(g)
-        quality, recommendation, color, emoji = assess_quality(npn_value)
+    # Reference
+    st.markdown("""
+    <div class="sidebar-section">
+        <h3>อ้างอิง / Reference</h3>
+        <p>
+        Nopparatmaitree et al.<br>
+        Khon Kaen Agriculture Journal<br>
+        SUPPL. 1 (2023)
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-        # Results
-        st.markdown(f"### {get_text('results_title')}")
+# Main content
+page = st.session_state.page
 
-        st.markdown(f"""
-        <div class="result-card">
-            <div style="font-size: 1.2rem; font-weight: 600;">
-                {get_text('npn_value')}
-            </div>
-            <div class="npn-value">{npn_value:.2f}%</div>
-            <div class="quality-badge" style="color: {color};">
-                {emoji} {quality}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Recommendation
-        st.markdown(f"""
-        <div class="info-box">
-            <h4 style="margin: 0 0 0.5rem 0; color: {color};">{emoji} {get_text('recommendation')}</h4>
-            <p style="margin: 0; font-size: 1.1rem;">{recommendation}</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # RGB Values
-        st.markdown(f"### {get_text('rgb_values')}")
-        st.markdown(f"""
-        <div class="rgb-container">
-            <div class="rgb-box" style="background: linear-gradient(135deg, #fee2e2, #fca5a5);">
-                <div class="rgb-label">Red (R)</div>
-                <div class="rgb-value">{r:.1f}</div>
-            </div>
-            <div class="rgb-box" style="background: linear-gradient(135deg, #dcfce7, #86efac);">
-                <div class="rgb-label">Green (G)</div>
-                <div class="rgb-value">{g:.1f}</div>
-            </div>
-            <div class="rgb-box" style="background: linear-gradient(135deg, #dbeafe, #93c5fd);">
-                <div class="rgb-label">Blue (B)</div>
-                <div class="rgb-value">{b:.1f}</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Calculation details
-        with st.expander(f"🔍 {get_text('method')}"):
-            st.markdown(f"""
-            **{get_text('equation')}:**
-            `y = -0.0261x + 3.8385`
-
-            **Calculation:**
-            - Green (G) value: {g:.2f}
-            - NPN = -0.0261 × {g:.2f} + 3.8385
-            - NPN = {npn_value:.2f}%
-
-            **Correlation:**
-            - R² = 0.5902
-            - r = -0.76823 (P < 0.01)
-
-            **{get_text('reference')}:**
-            {get_text('ref_text')}
-            """)
-
-        st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(f"""
-        <div style="text-align: center; padding: 4rem 2rem;">
-            <div style="font-size: 5rem; margin-bottom: 1rem;">📊</div>
-            <h3>{get_text('results_title')}</h3>
-            <p style="color: #64748b;">
-                {get_text('upload_help')}<br>
-                {get_text('analyze_btn').replace('🔍', '')}
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# Footer
-st.markdown("""
-<div style="text-align: center; color: white; padding: 2rem; font-size: 0.9rem;">
-    Powered by Streamlit | Based on research by Nopparatmaitree et al. (2023)
+# Top bar
+st.markdown(f"""
+<div class="top-bar">
+    <h1>{t(page).title() if page in ['upload', 'results', 'guide', 'about'] else t('upload').title()}</h1>
+    <p>{t('upload_title') if page == 'upload' else ''}</p>
 </div>
 """, unsafe_allow_html=True)
+
+st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
+
+if page == 'upload':
+    col1, col2 = st.columns([2, 1], gap="large")
+
+    with col1:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        uploaded_file = st.file_uploader(
+            "Upload", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed")
+
+        if uploaded_file:
+            image = Image.open(uploaded_file)
+            st.markdown('<div class="image-preview">', unsafe_allow_html=True)
+            st.image(image, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        if uploaded_file:
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.markdown(f"**Filename:** {uploaded_file.name}")
+            st.markdown(f"**Size:** {uploaded_file.size / 1024:.1f} KB")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            st.markdown('<div class="analyze-button">', unsafe_allow_html=True)
+            if st.button(t('analyze'), use_container_width=True):
+                r, g, b = extract_rgb_from_image(image)
+                npn_value = calculate_npn(g)
+                quality, rec, color, emoji = assess_quality(npn_value)
+
+                st.session_state.update({
+                    'analyzed': True, 'r': r, 'g': g, 'b': b,
+                    'npn_value': npn_value, 'quality': quality,
+                    'recommendation': rec, 'color': color, 'emoji': emoji, 'image': image
+                })
+
+                st.session_state.page = 'results'
+                st.rerun()
+            st.markdown('</div></div>', unsafe_allow_html=True)
+
+elif page == 'results':
+    if 'analyzed' in st.session_state and st.session_state.analyzed:
+        col1, col2 = st.columns([1, 2], gap="large")
+
+        with col1:
+            st.markdown('<div class="card image-preview">', unsafe_allow_html=True)
+            st.image(st.session_state.image, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col2:
+            st.markdown(f"""
+            <div class="result-card">
+                <div class="result-label">{t('npn')}</div>
+                <div class="result-value">{st.session_state.npn_value:.2f}%</div>
+                <div class="quality-badge">
+                    <span>{st.session_state.emoji}</span>
+                    <span>{st.session_state.quality}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"""
+            <div class="info-box">
+                <div class="info-box-title">{t('recommendation')}</div>
+                <div class="info-box-text">{st.session_state.recommendation}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown(f"## {t('rgb')}")
+        st.markdown(f"""
+        <div class="rgb-grid">
+            <div class="rgb-item">
+                <div class="rgb-item-label">Red (R)</div>
+                <div class="rgb-item-value">{st.session_state.r:.0f}</div>
+            </div>
+            <div class="rgb-item">
+                <div class="rgb-item-label">Green (G)</div>
+                <div class="rgb-item-value">{st.session_state.g:.0f}</div>
+            </div>
+            <div class="rgb-item">
+                <div class="rgb-item-label">Blue (B)</div>
+                <div class="rgb-item-value">{st.session_state.b:.0f}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.info(f"{t('no_result')}\n\n{t('upload_first')}")
+
+elif page == 'guide':
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("""
+    ### วิธีใช้งาน / User Guide
+
+    **ขั้นตอนที่ 1: เตรียมตัวอย่าง**
+    - เตรียมสารละลายกากถั่วเหลือง
+    - ทำปฏิกิริยากับ Nessler reagent
+    - รอให้เกิดสีตามมาตรฐาน
+
+    **ขั้นตอนที่ 2: ถ่ายภาพ**
+    - ใช้แสงสม่ำเสมอ (LED แนะนำ)
+    - พื้นหลังสีขาว
+    - ระยะห่าง 15-20 cm
+    - หลีกเลี่ยงเงาและแสงสะท้อน
+
+    **ขั้นตอนที่ 3: อัปโหลดและวิเคราะห์**
+    - ไปที่หน้า "อัปโหลด"
+    - เลือกหรือลากไฟล์ภาพ
+    - กดปุ่ม "วิเคราะห์"
+    - ดูผลลัพธ์ที่หน้า "ผลลัพธ์"
+    """)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+elif page == 'about':
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("""
+    ### เกี่ยวกับระบบ / About System
+
+    ระบบนี้พัฒนาจากงานวิจัย:
+
+    **"การพัฒนาเทคนิคการตรวจวัดนันโปรตีนไนโตรเจนในกากถั่วเหลืองด้วยวิธีการวัดสีของถ่ายภาพและเครื่องสเปกโตโฟโตมิเตอร์"**
+
+    **ผู้วิจัย:** มนัสนันท์ นพรัตน์ไมตรี และคณะ
+
+    **หน่วยงาน:** คณะสัตวศาสตร์และเทคโนโลยีการเกษตร มหาวิทยาลัยศิลปากร
+
+    **วารสาร:** Khon Kaen Agriculture Journal SUPPL. 1 (2023)
+
+    **วิธีการ:** ใช้สมการถดถอยเชิงเส้นในการคำนวณปริมาณ NPN จากค่าสีเขียว (G) ของภาพถ่าย
+
+    **ความแม่นยำ:**
+    - R² = 0.5902
+    - r = -0.76823 (P < 0.01)
+    """)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
