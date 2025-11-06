@@ -13,10 +13,13 @@ if 'language' not in st.session_state:
     st.session_state.language = 'th'
 if 'page' not in st.session_state:
     st.session_state.page = 'upload'
+if 'calibration_factor' not in st.session_state:
+    st.session_state.calibration_factor = 1.0
 
 translations = {
     'th': {
         'upload': 'อัปโหลด', 'results': 'ผลลัพธ์', 'guide': 'คู่มือ', 'about': 'เกี่ยวกับ',
+        'npn_info': 'เกี่ยวกับ NPN', 'calibration': 'คาลิเบรตสี', 'privacy': 'ความเป็นส่วนตัว',
         'title': 'NPN ANALYZER', 'subtitle': 'ระบบวิเคราะห์ไนโตรเจนไม่ใช่โปรตีน',
         'upload_title': 'อัปโหลดภาพสารละลาย', 'analyze': 'วิเคราะห์', 'npn': 'ปริมาณ NPN',
         'quality': 'คุณภาพ', 'recommendation': 'คำแนะนำ', 'rgb': 'ค่าสี RGB',
@@ -26,9 +29,14 @@ translations = {
         'rec_low': 'คุณภาพต่ำ ควรปรับปรุงกระบวนการผลิต',
         'rec_very_low': 'คุณภาพต่ำมาก ไม่แนะนำให้ใช้งาน',
         'no_result': 'ยังไม่มีผลการวิเคราะห์', 'upload_first': 'กรุณาอัปโหลดภาพและกดวิเคราะห์',
+        'upload_image': '📤 อัปโหลดภาพ', 'take_photo': '📷 ถ่ายภาพ', 'use_sample': '🧪 ใช้ภาพตัวอย่าง',
+        'calibrate_color': 'คาลิเบรตสี', 'upload_reference': 'อัปโหลดภาพอ้างอิง',
+        'ref_npn_value': 'ค่า NPN ที่ทราบ (%)', 'apply_calibration': 'ใช้การคาลิเบรต',
+        'calibration_applied': 'ใช้การคาลิเบรตแล้ว'
     },
     'en': {
         'upload': 'Upload', 'results': 'Results', 'guide': 'Guide', 'about': 'About',
+        'npn_info': 'About NPN', 'calibration': 'Color Calibration', 'privacy': 'Privacy',
         'title': 'NPN ANALYZER', 'subtitle': 'Non-Protein Nitrogen Analysis System',
         'upload_title': 'Upload Solution Image', 'analyze': 'Analyze', 'npn': 'NPN Content',
         'quality': 'Quality', 'recommendation': 'Recommendation', 'rgb': 'RGB Values',
@@ -38,6 +46,10 @@ translations = {
         'rec_low': 'Low quality, production improvement needed',
         'rec_very_low': 'Very low quality, not recommended',
         'no_result': 'No Results Yet', 'upload_first': 'Please upload an image and analyze',
+        'upload_image': '📤 Upload Image', 'take_photo': '📷 Take Photo', 'use_sample': '🧪 Use Sample',
+        'calibrate_color': 'Calibrate Color', 'upload_reference': 'Upload Reference Image',
+        'ref_npn_value': 'Known NPN Value (%)', 'apply_calibration': 'Apply Calibration',
+        'calibration_applied': 'Calibration Applied'
     }
 }
 
@@ -52,8 +64,9 @@ def extract_rgb_from_image(image):
         img_array = img_array[:, :, :3]
     return np.mean(img_array[:, :, 0]), np.mean(img_array[:, :, 1]), np.mean(img_array[:, :, 2])
 
-def calculate_npn(green_value):
-    return max(0, -0.0261 * green_value + 3.8385)
+def calculate_npn(green_value, calibration_factor=1.0):
+    adjusted_green = green_value * calibration_factor
+    return max(0, -0.0261 * adjusted_green + 3.8385)
 
 def assess_quality(npn_value):
     if npn_value <= 0.5:
@@ -330,6 +343,43 @@ st.markdown("""
         margin: 0;
     }
 
+    /* Action buttons */
+    .action-button {
+        background: #ffffff;
+        border: 2px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 32px 24px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-bottom: 16px;
+    }
+
+    .action-button:hover {
+        border-color: #000000;
+        background: #fafafa;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-button-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+    }
+
+    .action-button-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        margin: 0;
+    }
+
+    .action-button-desc {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 8px 0 0 0;
+    }
+
     /* Analyze button */
     .analyze-button button {
         background: #000000 !important;
@@ -438,8 +488,20 @@ with st.sidebar:
         st.session_state.page = 'results'
         st.rerun()
 
+    if st.button(f"🎨  {t('calibration')}", key="btn_calibration"):
+        st.session_state.page = 'calibration'
+        st.rerun()
+
+    if st.button(f"🧬  {t('npn_info')}", key="btn_npn_info"):
+        st.session_state.page = 'npn_info'
+        st.rerun()
+
     if st.button(f"📖  {t('guide')}", key="btn_guide"):
         st.session_state.page = 'guide'
+        st.rerun()
+
+    if st.button(f"🔒  {t('privacy')}", key="btn_privacy"):
+        st.session_state.page = 'privacy'
         st.rerun()
 
     if st.button(f"ℹ️  {t('about')}", key="btn_about"):
@@ -485,32 +547,24 @@ st.markdown(f"""
 st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
 
 if page == 'upload':
-    col1, col2 = st.columns([2, 1], gap="large")
+    # Action buttons
+    col1, col2, col3 = st.columns(3, gap="medium")
 
     with col1:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         uploaded_file = st.file_uploader(
-            "Upload", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed")
-
+            t('upload_image'), type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="main_uploader")
         if uploaded_file:
             image = Image.open(uploaded_file)
             st.markdown('<div class="image-preview">', unsafe_allow_html=True)
             st.image(image, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with col2:
-        if uploaded_file:
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.markdown(f"**Filename:** {uploaded_file.name}")
-            st.markdown(f"**Size:** {uploaded_file.size / 1024:.1f} KB")
 
             st.markdown("<br>", unsafe_allow_html=True)
-
             st.markdown('<div class="analyze-button">', unsafe_allow_html=True)
-            if st.button(t('analyze'), use_container_width=True):
+            if st.button(t('analyze'), use_container_width=True, key="analyze_btn"):
                 r, g, b = extract_rgb_from_image(image)
-                npn_value = calculate_npn(g)
+                npn_value = calculate_npn(g, st.session_state.calibration_factor)
                 quality, rec, color, emoji = assess_quality(npn_value)
 
                 st.session_state.update({
@@ -521,7 +575,54 @@ if page == 'upload':
 
                 st.session_state.page = 'results'
                 st.rerun()
-            st.markdown('</div></div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        st.markdown('<div class="card" style="height: 100%">', unsafe_allow_html=True)
+        st.markdown("""
+        <div style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 64px; margin-bottom: 20px;">📷</div>
+            <h3 style="margin: 0 0 12px 0;">""" + t('take_photo') + """</h3>
+            <p style="color: #6b7280; margin: 0;">ถ่ายภาพสารละลายโดยตรงจากกล้อง</p>
+        </div>
+        """, unsafe_allow_html=True)
+        camera_file = st.camera_input("", label_visibility="collapsed", key="camera")
+        if camera_file:
+            image = Image.open(camera_file)
+            st.markdown('<div class="analyze-button">', unsafe_allow_html=True)
+            if st.button(t('analyze'), use_container_width=True, key="analyze_camera"):
+                r, g, b = extract_rgb_from_image(image)
+                npn_value = calculate_npn(g, st.session_state.calibration_factor)
+                quality, rec, color, emoji = assess_quality(npn_value)
+
+                st.session_state.update({
+                    'analyzed': True, 'r': r, 'g': g, 'b': b,
+                    'npn_value': npn_value, 'quality': quality,
+                    'recommendation': rec, 'color': color, 'emoji': emoji, 'image': image
+                })
+
+                st.session_state.page = 'results'
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col3:
+        st.markdown('<div class="card" style="height: 100%">', unsafe_allow_html=True)
+        st.markdown("""
+        <div style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🧪</div>
+            <h3 style="margin: 0 0 12px 0;">""" + t('use_sample') + """</h3>
+            <p style="color: #6b7280; margin: 0;">ทดลองใช้งานด้วยภาพตัวอย่าง</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("ใช้ภาพตัวอย่าง", use_container_width=True, key="use_sample"):
+            st.info("ฟีเจอร์นี้จะเพิ่มในเวอร์ชันถัดไป")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Calibration status
+    if st.session_state.calibration_factor != 1.0:
+        st.success(f"✓ {t('calibration_applied')} (Factor: {st.session_state.calibration_factor:.3f})")
 
 elif page == 'results':
     if 'analyzed' in st.session_state and st.session_state.analyzed:
@@ -592,6 +693,181 @@ elif page == 'guide':
     - เลือกหรือลากไฟล์ภาพ
     - กดปุ่ม "วิเคราะห์"
     - ดูผลลัพธ์ที่หน้า "ผลลัพธ์"
+    """)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+elif page == 'calibration':
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown(f"### {t('calibrate_color')}")
+    st.markdown("""
+    การคาลิเบรตสีช่วยให้ผลการวิเคราะห์แม่นยำยิ่งขึ้นโดยการปรับค่าสีให้เหมาะสมกับสภาพแสงและกล้องของคุณ
+
+    **วิธีการ:** อัปโหลดภาพตัวอย่างที่ทราบค่า NPN แล้ว ระบบจะคำนวณค่าปรับแก้อัตโนมัติ
+    """)
+
+    col1, col2 = st.columns(2, gap="large")
+
+    with col1:
+        st.markdown(f"#### {t('upload_reference')}")
+        ref_file = st.file_uploader("", type=['png', 'jpg', 'jpeg'], key="calibration_uploader")
+
+        if ref_file:
+            ref_image = Image.open(ref_file)
+            st.image(ref_image, use_container_width=True)
+
+    with col2:
+        if ref_file:
+            st.markdown(f"#### {t('ref_npn_value')}")
+            known_npn = st.number_input("", min_value=0.0, max_value=10.0, value=1.0, step=0.1, key="known_npn")
+
+            if st.button(t('apply_calibration'), use_container_width=True):
+                r, g, b = extract_rgb_from_image(ref_image)
+                # Calculate what the green value should be for the known NPN
+                # y = -0.0261x + 3.8385
+                # x = (3.8385 - y) / 0.0261
+                expected_green = (3.8385 - known_npn) / 0.0261
+                st.session_state.calibration_factor = expected_green / g
+                st.success(f"✓ คาลิเบรตสำเร็จ! Factor: {st.session_state.calibration_factor:.3f}")
+                st.info(f"ค่า Green ที่วัดได้: {g:.1f} → ค่า Green ที่คาดหวัง: {expected_green:.1f}")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if st.session_state.calibration_factor != 1.0:
+        if st.button("รีเซ็ตการคาลิเบรต"):
+            st.session_state.calibration_factor = 1.0
+            st.rerun()
+
+elif page == 'npn_info':
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("""
+    ### 🧬 NPN (Non-Protein Nitrogen) คืออะไร?
+
+    **NPN หรือ ไนโตรเจนไม่ใช่โปรตีน** คือสารประกอบไนโตรเจนที่ไม่ได้อยู่ในรูปโปรตีน เช่น ยูเรีย แอมโมเนีย กรดอะมิโนอิสระ และนิวคลีโอไทด์
+
+    ---
+
+    ### ทำไมต้องตรวจ NPN?
+
+    **1. ประเมินคุณภาพวัตถุดิบ**
+    - กากถั่วเหลืองคุณภาพดีควรมี NPN ต่ำ (< 1%)
+    - NPN สูงอาจบ่งชี้ถึงการเสื่อมสภาพหรือการปลอมปน
+
+    **2. ป้องกันการทุจริต**
+    - ผู้ไม่ประสงค์ดีอาจเติมยูเรียเพื่อเพิ่มปริมาณโปรตีนปลอม
+    - การวัด NPN ช่วยตรวจจับการปลอมปนนี้ได้
+
+    **3. ความปลอดภัยของสัตว์**
+    - NPN สูงเกินไปอาจเป็นอันตรายต่อสัตว์
+    - โดยเฉพาะในสัตว์เคี้ยวเอื้อง NPN ควรอยู่ในระดับที่เหมาะสม
+
+    ---
+
+    ### ระดับ NPN ที่ดี
+
+    | ระดับ NPN | คุณภาพ | คำอธิบาย |
+    |-----------|--------|----------|
+    | ≤ 0.5% | ดีเยี่ยม | คุณภาพสูงสุด เหมาะสำหรับอาหารสัตว์คุณภาพ |
+    | 0.5-1.0% | ดี | คุณภาพดี ใช้งานได้ตามมาตรฐาน |
+    | 1.0-2.0% | ปานกลาง | ควรตรวจสอบเพิ่มเติม อาจมีการเสื่อมสภาพเล็กน้อย |
+    | 2.0-3.0% | ต่ำ | คุณภาพต่ำ ควรปรับปรุงกระบวนการผลิต |
+    | > 3.0% | ต่ำมาก | ไม่แนะนำให้ใช้ อาจมีการปลอมปนหรือเสื่อมสภาพ |
+
+    ---
+
+    ### วิธีการตรวจวัด
+
+    **วิธีดั้งเดิม:** ใช้เครื่อง Spectrophotometer ในห้องแล็บ
+    - ใช้เวลานาน
+    - ต้องการอุปกรณ์ราคาแพง
+    - ต้องมีผู้เชี่ยวชาญ
+
+    **วิธีใหม่ (ระบบนี้):** วิเคราะห์จากภาพถ่าย
+    - รวดเร็ว ได้ผลในไม่กี่วินาที
+    - ไม่ต้องใช้อุปกรณ์แพง
+    - ใช้งานง่าย เพียงมีสมาร์ทโฟน
+
+    ---
+
+    ### หลักการทำงาน
+
+    1. **ปฏิกิริยาสี:** NPN ทำปฏิกิริยากับ Nessler reagent เกิดสีเหลือง-ส้ม
+    2. **วิเคราะห์สี:** ค่าสีเขียว (G) ในระบบ RGB มีความสัมพันธ์กับปริมาณ NPN
+    3. **คำนวณ:** ใช้สมการถดถอย `NPN = -0.0261 × G + 3.8385`
+
+    ยิ่ง NPN สูง → สีเข้มขึ้น → ค่า G น้อยลง → NPN% สูงขึ้น
+    """)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+elif page == 'privacy':
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("""
+    ### 🔒 นโยบายความเป็นส่วนตัวและการรักษาข้อมูล
+
+    ---
+
+    ### การเก็บรักษาข้อมูล
+
+    **ระบบนี้ให้ความสำคัญกับความเป็นส่วนตัวของคุณ:**
+
+    ✓ **ไม่เก็บภาพถ่าย** - ทุกภาพที่อัปโหลดจะถูกประมวลผลใน Session ปัจจุบันเท่านั้น
+    ✓ **ไม่บันทึกผลลัพธ์** - ข้อมูลทั้งหมดจะหายไปเมื่อปิดหน้าเว็บ
+    ✓ **ไม่มีฐานข้อมูล** - ระบบไม่มีการเชื่อมต่อกับฐานข้อมูลใดๆ
+    ✓ **ไม่แชร์ข้อมูล** - ข้อมูลของคุณจะไม่ถูกส่งไปยังบุคคลที่สาม
+
+    ---
+
+    ### การประมวลผลข้อมูล
+
+    **ข้อมูลที่ระบบใช้:**
+    - ภาพถ่ายสารละลายที่คุณอัปโหลด
+    - ค่าสี RGB ที่คำนวณจากภาพ
+    - ผลการวิเคราะห์ NPN
+
+    **ระยะเวลาเก็บข้อมูล:**
+    - ข้อมูลจะถูกเก็บใน Session Storage ของเบราว์เซอร์เท่านั้น
+    - เมื่อปิดหรือรีเฟรชหน้าเว็บ ข้อมูลทั้งหมดจะถูกลบทันที
+    - ระบบไม่มีการบันทึกข้อมูลลงเซิร์ฟเวอร์
+
+    ---
+
+    ### เทคโนโลยีที่ใช้
+
+    **Streamlit Community Cloud:**
+    - แอปพลิเคชันถูกโฮสต์บน Streamlit Community Cloud
+    - เป็น Platform ที่ปลอดภัยและเชื่อถือได้
+    - มีการเข้ารหัส HTTPS สำหรับการสื่อสารทั้งหมด
+
+    **การประมวลผลข้อมูล:**
+    - การวิเคราะห์ภาพทำบนเซิร์ฟเวอร์ชั่วคราว
+    - ไม่มีการบันทึกภาพหรือผลลัพธ์หลังจากประมวลผลเสร็จ
+    - ใช้ Python libraries: Streamlit, PIL, NumPy
+
+    ---
+
+    ### สิทธิของผู้ใช้งาน
+
+    คุณมีสิทธิ์:
+    - ใช้งานระบบโดยไม่ต้องลงทะเบียน
+    - ไม่ต้องให้ข้อมูลส่วนตัว
+    - หยุดการใช้งานได้ทุกเมื่อ
+
+    ---
+
+    ### ข้อจำกัดความรับผิดชอบ
+
+    ⚠️ **คำเตือน:**
+    - ระบบนี้เป็นเครื่องมือช่วยประเมินเบื้องต้น
+    - ผลการวิเคราะห์ควรใช้ประกอบการตัดสินใจเท่านั้น
+    - สำหรับการตรวจสอบอย่างเป็นทางการ ควรใช้ห้องปฏิบัติการที่ได้มาตรฐาน
+    - ผู้พัฒนาไม่รับผิดชอบต่อความเสียหายที่เกิดจากการใช้งาน
+
+    ---
+
+    ### การติดต่อ
+
+    หากมีคำถามเกี่ยวกับนโยบายความเป็นส่วนตัว กรุณาติดต่อผู้พัฒนาระบบ
+
+    **อัปเดตล่าสุด:** 6 มกราคม 2568
     """)
     st.markdown('</div>', unsafe_allow_html=True)
 
