@@ -547,80 +547,110 @@ st.markdown(f"""
 st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
 
 if page == 'upload':
-    # Main upload section
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown(f"### 📤 {t('upload_image')}")
+    # Show calibration status at top if active
+    if st.session_state.calibration_factor != 1.0:
+        st.info(f"🎨 {t('calibration_applied')} • Factor: {st.session_state.calibration_factor:.3f}")
+        st.markdown("<br>", unsafe_allow_html=True)
 
-    uploaded_file = st.file_uploader(
-        "", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="main_uploader")
+    # Check if we have an uploaded or captured image
+    if 'temp_image' in st.session_state and st.session_state.temp_image is not None:
+        # Show preview and analyze section
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("### 📊 พร้อมวิเคราะห์")
 
-    if uploaded_file:
         col1, col2 = st.columns([2, 1], gap="large")
 
         with col1:
-            image = Image.open(uploaded_file)
             st.markdown('<div class="image-preview">', unsafe_allow_html=True)
-            st.image(image, use_container_width=True)
+            st.image(st.session_state.temp_image, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
             st.markdown(f"""
-            <div style="background: #f9fafb; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">ข้อมูลไฟล์</div>
-                <div style="font-size: 15px; color: #111827; font-weight: 600; margin-bottom: 4px;">{uploaded_file.name}</div>
-                <div style="font-size: 14px; color: #6b7280;">{uploaded_file.size / 1024:.1f} KB</div>
+            <div style="background: #f9fafb; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                <div style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">ข้อมูลภาพ</div>
+                <div style="font-size: 15px; color: #111827; font-weight: 600; margin-bottom: 4px;">{st.session_state.temp_filename}</div>
+                <div style="font-size: 14px; color: #6b7280;">พร้อมวิเคราะห์</div>
             </div>
             """, unsafe_allow_html=True)
 
             st.markdown('<div class="analyze-button">', unsafe_allow_html=True)
-            if st.button(t('analyze'), use_container_width=True, key="analyze_btn"):
-                r, g, b = extract_rgb_from_image(image)
+            if st.button("🔍 วิเคราะห์ทันที", use_container_width=True, key="analyze_main"):
+                r, g, b = extract_rgb_from_image(st.session_state.temp_image)
                 npn_value = calculate_npn(g, st.session_state.calibration_factor)
                 quality, rec, color, emoji = assess_quality(npn_value)
 
                 st.session_state.update({
                     'analyzed': True, 'r': r, 'g': g, 'b': b,
                     'npn_value': npn_value, 'quality': quality,
-                    'recommendation': rec, 'color': color, 'emoji': emoji, 'image': image
+                    'recommendation': rec, 'color': color, 'emoji': emoji, 'image': st.session_state.temp_image
                 })
 
                 st.session_state.page = 'results'
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+            if st.button("🔄 เลือกภาพใหม่", use_container_width=True):
+                st.session_state.temp_image = None
+                st.session_state.temp_filename = None
+                st.rerun()
 
-    # Camera section
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown(f"### 📷 {t('take_photo')}")
-    st.markdown('<p style="color: #6b7280; margin-bottom: 20px;">ถ่ายภาพสารละลายโดยตรงจากกล้อง</p>', unsafe_allow_html=True)
-
-    camera_file = st.camera_input("", label_visibility="collapsed", key="camera")
-
-    if camera_file:
-        image = Image.open(camera_file)
-
-        st.markdown('<div class="analyze-button" style="margin-top: 20px;">', unsafe_allow_html=True)
-        if st.button(t('analyze'), use_container_width=True, key="analyze_camera"):
-            r, g, b = extract_rgb_from_image(image)
-            npn_value = calculate_npn(g, st.session_state.calibration_factor)
-            quality, rec, color, emoji = assess_quality(npn_value)
-
-            st.session_state.update({
-                'analyzed': True, 'r': r, 'g': g, 'b': b,
-                'npn_value': npn_value, 'quality': quality,
-                'recommendation': rec, 'color': color, 'emoji': emoji, 'image': image
-            })
-
-            st.session_state.page = 'results'
-            st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        # Show three action cards
+        col1, col2, col3 = st.columns(3, gap="medium")
 
-    # Calibration status
-    if st.session_state.calibration_factor != 1.0:
-        st.success(f"✓ {t('calibration_applied')} (Factor: {st.session_state.calibration_factor:.3f})")
+        with col1:
+            st.markdown("""
+            <div class="card" style="text-align: center; padding: 48px 32px; min-height: 400px;">
+                <div style="font-size: 80px; margin-bottom: 24px;">📤</div>
+                <h3 style="margin: 0 0 16px 0; font-size: 22px;">อัปโหลดภาพ</h3>
+                <p style="color: #6b7280; font-size: 15px; line-height: 1.6; margin-bottom: 32px;">
+                    เลือกไฟล์ภาพจากเครื่องของคุณ รองรับ PNG, JPG, JPEG
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            uploaded_file = st.file_uploader("เลือกไฟล์", type=['png', 'jpg', 'jpeg'],
+                                            label_visibility="collapsed", key="upload_card")
+            if uploaded_file:
+                st.session_state.temp_image = Image.open(uploaded_file)
+                st.session_state.temp_filename = uploaded_file.name
+                st.rerun()
+
+        with col2:
+            st.markdown("""
+            <div class="card" style="text-align: center; padding: 48px 32px; min-height: 400px;">
+                <div style="font-size: 80px; margin-bottom: 24px;">📷</div>
+                <h3 style="margin: 0 0 16px 0; font-size: 22px;">ถ่ายภาพ</h3>
+                <p style="color: #6b7280; font-size: 15px; line-height: 1.6; margin-bottom: 32px;">
+                    ใช้กล้องถ่ายภาพสารละลายโดยตรง เหมาะสำหรับมือถือ
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            camera_file = st.camera_input("ถ่ายภาพ", label_visibility="collapsed", key="camera_card")
+            if camera_file:
+                st.session_state.temp_image = Image.open(camera_file)
+                st.session_state.temp_filename = "camera_capture.jpg"
+                st.rerun()
+
+        with col3:
+            st.markdown("""
+            <div class="card" style="text-align: center; padding: 48px 32px; min-height: 400px;">
+                <div style="font-size: 80px; margin-bottom: 24px;">🧪</div>
+                <h3 style="margin: 0 0 16px 0; font-size: 22px;">ภาพตัวอย่าง</h3>
+                <p style="color: #6b7280; font-size: 15px; line-height: 1.6; margin-bottom: 32px;">
+                    ทดลองใช้งานด้วยภาพตัวอย่างที่เตรียมไว้ให้
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown('<div style="margin-top: 16px;">', unsafe_allow_html=True)
+            if st.button("📥 โหลดภาพตัวอย่าง", use_container_width=True, key="sample_btn"):
+                st.info("💡 ฟีเจอร์นี้กำลังพัฒนา - กรุณาอัปโหลดภาพของคุณเอง")
+            st.markdown('</div>', unsafe_allow_html=True)
 
 elif page == 'results':
     if 'analyzed' in st.session_state and st.session_state.analyzed:
